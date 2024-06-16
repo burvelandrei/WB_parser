@@ -21,11 +21,12 @@ def get_data_category(catalogs_wb: dict) -> list:
     print("Парсинг данных начат")
     create_excel()
     for category in catalogs_wb:
-        # if isinstance(category, dict) and "childs" in category:
-        #     category_name = f"{category['name']}"
-        #     all_podcategory = get_data_podcategory(category["childs"], category_name)
-        #     write_excel(all_podcategory, category_name)
-        if isinstance(category, dict):
+        if isinstance(category, dict) and "childs" in category:
+            category_name = f"{category['name']}"
+            all_podcategory = get_data_podcategory(category["childs"], category_name)
+            write_excel(all_podcategory, category_name)
+            print("Категория обработана")
+        elif isinstance(category, dict):
             if "shard" in category and "query" in category:
                 category_name = f"{category['name']}"
                 shard = category["shard"]
@@ -44,9 +45,10 @@ def get_data_podcategory(podcategorys: dict, category_name: str) -> list:
                 "name": f"{podcategorys['name']}",
             }
         )
-        shard = podcategorys["shard"]
-        query = podcategorys["query"]
-        all_podcategory.extend(get_content(shard, query))
+        if "shard" in podcategorys and "query" in podcategorys:
+            shard = podcategorys["shard"]
+            query = podcategorys["query"]
+            # all_podcategory.extend(get_content(shard, query))
     elif isinstance(podcategorys, dict):
         all_podcategory.append(
             {
@@ -66,12 +68,12 @@ def get_data_podcategory(podcategorys: dict, category_name: str) -> list:
 def get_data_from_json(json_file):
     """извлекаем из json интересующие нас данные"""
     products = []
-    frame = pd.DataFrame(json_file)
     for data in json_file['data']['products']:
+        id = data.get("id")
+        name = data.get("name")
         products.append({
-            'id': data['id'],
-            'name': data['name'],
-        })
+            'id': id,
+            'name': name,})
     return products
 
 
@@ -79,7 +81,7 @@ def get_content(shard, query):
     # вайлдбериз отдает только 100 страниц
     headers = {'Accept': "*/*", 'User-Agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
     data_list = []
-    for page in range(1, 101):
+    for page in range(1):
         try:
             url = f'https://catalog.wb.ru/catalog/{shard}/catalog?appType=1&curr=rub&dest=-1075831,-77677,-398551,12358499' \
                 f'&locale=ru&page={page}'\
@@ -87,6 +89,7 @@ def get_content(shard, query):
             response = requests.get(url, headers=headers)
             if response.status_code == 200:
                 data = response.json()
+                print(f'Добавлено позиций: {len(get_data_from_json(data))}')
                 products = get_data_from_json(data)
                 if len(products) > 0:
                     data_list.extend(products)
