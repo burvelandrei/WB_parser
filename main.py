@@ -36,32 +36,35 @@ def get_data_category(catalogs_wb: dict) -> list:
     print("Парсинг данных окончен")
 
 
-def get_data_podcategory(podcategorys: dict, category_name: str) -> list:
+def get_data_podcategory(podcategorys: dict, category_name: str, level = 1) -> list:
     all_podcategory = []
     if isinstance(podcategorys, dict) and "childs" not in podcategorys:
         all_podcategory.append(
             {
                 "id": f"{podcategorys['id']}",
                 "name": f"{podcategorys['name']}",
+                "level": level
             }
         )
         if "shard" in podcategorys and "query" in podcategorys:
             shard = podcategorys["shard"]
             query = podcategorys["query"]
-            # all_podcategory.extend(get_content(shard, query))
+            all_podcategory.extend(get_content(shard, query))
     elif isinstance(podcategorys, dict):
         all_podcategory.append(
             {
                 "id": f"{podcategorys['id']}",
                 "name": f"{podcategorys['name']}",
+                "level": level
             }
         )
+        level += 1
         all_podcategory.extend(
-            get_data_podcategory(podcategorys["childs"], category_name)
+            get_data_podcategory(podcategorys["childs"], category_name, level)
         )
     else:
         for child in podcategorys:
-            all_podcategory.extend(get_data_podcategory(child, category_name))
+            all_podcategory.extend(get_data_podcategory(child, category_name, level))
     return all_podcategory
 
 
