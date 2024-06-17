@@ -1,6 +1,7 @@
 import requests
 import json
 import openpyxl
+import time
 import pandas as pd
 from random_user_agent.user_agent import UserAgent
 from random_user_agent.params import SoftwareName, OperatingSystem
@@ -34,7 +35,7 @@ def get_data_category(catalogs_wb: dict) -> list:
             category_name = f"{category['name']}"
             all_podcategory = get_data_podcategory(category["childs"], category_name)
             write_excel(all_podcategory, category_name)
-            print("Категория обработана")
+            print(f"Категория обработана {category_name}")
         elif isinstance(category, dict):
             if "shard" in category and "query" in category:
                 category_name = f"{category['name']}"
@@ -92,38 +93,29 @@ def get_data_from_json(json_file, level):
 
 def get_content(shard, query, level):
     # вайлдбериз отдает только 100 страниц
-    headers = {'Accept': "*/*", "User-Agent": f'{rotation_user_agent()}'}
     data_list = []
     level += 1
-    for page in range(1, 2):
+    for page in range(1, 101):
         try:
-            url = f'https://catalog.wb.ru/catalog/{shard}/catalog?appType=1&curr=rub&dest=-1075831,-77677,-398551,12358499' \
-                f'&locale=ru&page={page}'\
-                f'&reg=0&regions=64,83,4,38,80,33,70,82,86,30,69,1,48,22,66,31,40&sort=popular&spp=0&{query}'
+            headers = {'Accept': "*/*", "User-Agent": f'{rotation_user_agent()}'}
+            url = f'https://catalog.wb.ru/catalog/{shard}/catalog?appType=1&curr=rub' \
+                f'&dest=-1257786' \
+                f'&locale=ru' \
+                f'&page={page}' \
+                f'&sort=popular&spp=0' \
+                f'&{query}'
             response = requests.get(url, headers=headers)
-            print(response.status_code)
             if response.status_code == 200:
                 data = response.json()
-                print(f'Добавлено позиций: {len(get_data_from_json(data, level))}')
+                print(f'{page} Добавлено позиций: {len(get_data_from_json(data, level))}')
                 products = get_data_from_json(data, level)
                 if len(products) > 0:
                     data_list.extend(products)
-            # elif response.status_code == 429:
-            # #     get_content(shard, query, level)
-            #     headers = {'Accept': "*/*", "User-Agent": f'{rotation_user_agent()}'}
-            #     url = f'https://catalog.wb.ru/catalog/{shard}/catalog?appType=1&curr=rub&dest=-1075831,-77677,-398551,12358499' \
-            #     f'&locale=ru&page={page}'\
-            #     f'&reg=0&regions=64,83,4,38,80,33,70,82,86,30,69,1,48,22,66,31,40&sort=popular&spp=0&{query}'
-            #     response = requests.get(url, headers=headers)
-            #     data = response.json()
-            #     print(f'Добавлено позиций: {len(get_data_from_json(data, level))}')
-            #     products = get_data_from_json(data, level)
-            #     if len(products) > 0:
-            #         data_list.extend(products)
         except Exception as e:
             print(e)
             continue
     return data_list
+
 
 def create_excel():
     wb = openpyxl.Workbook()
