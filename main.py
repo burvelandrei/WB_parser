@@ -6,6 +6,10 @@ import pandas as pd
 from random_user_agent.user_agent import UserAgent
 from random_user_agent.params import SoftwareName, OperatingSystem
 
+# изменить на количество страниц которые хотите распарсить в подкатегории
+count_page = 20
+
+
 def rotation_user_agent():
     """функция возвращает рандомный user agent"""
     software_names = [SoftwareName.CHROME.value]
@@ -103,7 +107,7 @@ def get_content(shard: str, query: str, level: int):
     """функция для получения контента по переданной категории или подкатегории"""
     data_list = []
     level += 1
-    for page in range(1, 21):
+    for page in range(1, count_page + 1):
         try:
             headers = {'Accept': "*/*", "User-Agent": f'{rotation_user_agent()}'}
             url = f'https://catalog.wb.ru/catalog/{shard}/catalog?appType=1&curr=rub' \
@@ -115,14 +119,13 @@ def get_content(shard: str, query: str, level: int):
             response = requests.get(url, headers=headers)
             if response.status_code == 200:
                 data = response.json()
-                print(f'{page} Добавлено позиций: {len(get_data_from_json(data, level))}')
                 products = get_data_from_json(data, level)
                 if len(products) > 0:
                     data_list.extend(products)
         except Exception as e:
             print(e)
             continue
-    print("Подкатегория оработана")
+    print("Подкатегория обработана")
     return data_list
 
 
