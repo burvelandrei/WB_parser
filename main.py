@@ -2,6 +2,15 @@ import requests
 import json
 import openpyxl
 import pandas as pd
+from random_user_agent.user_agent import UserAgent
+from random_user_agent.params import SoftwareName, OperatingSystem
+
+def rotation_user_agent():
+    software_names = [SoftwareName.CHROME.value]
+    operating_systems = [OperatingSystem.WINDOWS.value, OperatingSystem.LINUX.value]
+    user_agent_rotator = UserAgent(software_names=software_names, operating_systems=operating_systems, limit=100)
+    user_agent = user_agent_rotator.get_random_user_agent()
+    return user_agent
 
 
 def get_catalogs_wb() -> dict:
@@ -9,7 +18,7 @@ def get_catalogs_wb() -> dict:
     url = "https://static-basket-01.wbbasket.ru/vol0/data/main-menu-ru-ru-v2.json"
     headers = {
         "Accept": "*/*",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+        "User-Agent": f'{rotation_user_agent()}'
     }
     response = requests.get(url, headers=headers).json()
     with open("wb_catalogs_data.json", "w", encoding="UTF-8") as file:
@@ -49,7 +58,7 @@ def get_data_podcategory(podcategorys: dict, category_name: str, level = 1) -> l
         if "shard" in podcategorys and "query" in podcategorys:
             shard = podcategorys["shard"]
             query = podcategorys["query"]
-            all_podcategory.extend(get_content(shard, query))
+            all_podcategory.extend(get_content(shard, query, level))
     elif isinstance(podcategorys, dict):
         all_podcategory.append(
             {
@@ -68,7 +77,7 @@ def get_data_podcategory(podcategorys: dict, category_name: str, level = 1) -> l
     return all_podcategory
 
 
-def get_data_from_json(json_file):
+def get_data_from_json(json_file, level):
     """извлекаем из json интересующие нас данные"""
     products = []
     for data in json_file['data']['products']:
@@ -76,27 +85,43 @@ def get_data_from_json(json_file):
         name = data.get("name")
         products.append({
             'id': id,
-            'name': name,})
+            'name': name,
+            'level': level})
     return products
 
 
-def get_content(shard, query):
+def get_content(shard, query, level):
     # вайлдбериз отдает только 100 страниц
-    headers = {'Accept': "*/*", 'User-Agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+    headers = {'Accept': "*/*", "User-Agent": f'{rotation_user_agent()}'}
     data_list = []
-    for page in range(1):
+    level += 1
+    for page in range(1, 2):
         try:
             url = f'https://catalog.wb.ru/catalog/{shard}/catalog?appType=1&curr=rub&dest=-1075831,-77677,-398551,12358499' \
                 f'&locale=ru&page={page}'\
                 f'&reg=0&regions=64,83,4,38,80,33,70,82,86,30,69,1,48,22,66,31,40&sort=popular&spp=0&{query}'
             response = requests.get(url, headers=headers)
+            print(response.status_code)
             if response.status_code == 200:
                 data = response.json()
-                print(f'Добавлено позиций: {len(get_data_from_json(data))}')
-                products = get_data_from_json(data)
+                print(f'Добавлено позиций: {len(get_data_from_json(data, level))}')
+                products = get_data_from_json(data, level)
                 if len(products) > 0:
                     data_list.extend(products)
-        except:
+            # elif response.status_code == 429:
+            # #     get_content(shard, query, level)
+            #     headers = {'Accept': "*/*", "User-Agent": f'{rotation_user_agent()}'}
+            #     url = f'https://catalog.wb.ru/catalog/{shard}/catalog?appType=1&curr=rub&dest=-1075831,-77677,-398551,12358499' \
+            #     f'&locale=ru&page={page}'\
+            #     f'&reg=0&regions=64,83,4,38,80,33,70,82,86,30,69,1,48,22,66,31,40&sort=popular&spp=0&{query}'
+            #     response = requests.get(url, headers=headers)
+            #     data = response.json()
+            #     print(f'Добавлено позиций: {len(get_data_from_json(data, level))}')
+            #     products = get_data_from_json(data, level)
+            #     if len(products) > 0:
+            #         data_list.extend(products)
+        except Exception as e:
+            print(e)
             continue
     return data_list
 
