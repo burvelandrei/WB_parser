@@ -10,6 +10,28 @@ from random_user_agent.params import SoftwareName, OperatingSystem
 count_page = 20
 
 
+class Excel():
+    def create_excel():
+        """функция для создания таблицы Эксель"""
+        wb = openpyxl.Workbook()
+        wb.save("parser.xlsx")
+
+
+    def delete_first_sheet():
+        """функция для удаления стартового листа"""
+        wb = openpyxl.load_workbook("parser.xlsx")
+        wb.remove(wb["Sheet"])
+        wb.save("parser.xlsx")
+
+
+    def write_excel(data: list, category_name: str):
+        """функция для записи данных в Эксель таблицу в нужный лист"""
+        df = pd.DataFrame(data)
+        writer = pd.ExcelWriter("parser.xlsx", mode="a")
+        df.to_excel(writer, sheet_name=category_name, index=False)
+        writer.close()
+
+
 def rotation_user_agent():
     """функция возвращает рандомный user agent"""
     software_names = [SoftwareName.CHROME.value]
@@ -34,14 +56,15 @@ def get_catalogs_wb() -> dict:
 def get_data_category(catalogs_wb: dict) -> list:
     """фунция для парсинга каталогов и точка входа в скрипт"""
     print("Парсинг данных начат")
+    excel = Excel()
     # создание таблицы
-    create_excel()
+    excel.create_excel()
     for category in catalogs_wb:
         # если категория имеет подкатегории, то опраялем её на дополнительный парсинг по подкатегориям
         if isinstance(category, dict) and "childs" in category:
             category_name = f"{category['name']}"
             all_podcategory = get_data_podcategory(category["childs"], category_name)
-            write_excel(all_podcategory, category_name)
+            excel.write_excel(all_podcategory, category_name)
             print(f"Категория {category_name} обработана")
         # если категория не имеет подкатегорий, то обрабатываем контент в данной категории
         elif isinstance(category, dict):
@@ -49,9 +72,9 @@ def get_data_category(catalogs_wb: dict) -> list:
                 category_name = f"{category['name']}"
                 shard = category["shard"]
                 query = category["query"]
-                write_excel(get_content(shard, query), category_name, level = 1)
+                excel.write_excel(get_content(shard, query), category_name, level = 1)
     # удаляем первый базовый лист
-    delete_first_sheet()
+    excel.delete_first_sheet()
     print("Парсинг данных окончен")
 
 
@@ -127,27 +150,6 @@ def get_content(shard: str, query: str, level: int):
             continue
     print("Подкатегория обработана")
     return data_list
-
-
-def create_excel():
-    """функция для создания таблицы Эксель"""
-    wb = openpyxl.Workbook()
-    wb.save("parser.xlsx")
-
-
-def delete_first_sheet():
-    """функция для удаления стартового листа"""
-    wb = openpyxl.load_workbook("parser.xlsx")
-    wb.remove(wb["Sheet"])
-    wb.save("parser.xlsx")
-
-
-def write_excel(data: list, category_name: str):
-    """функция для записи данных в Эксель таблицу в нужный лист"""
-    df = pd.DataFrame(data)
-    writer = pd.ExcelWriter("parser.xlsx", mode="a")
-    df.to_excel(writer, sheet_name=category_name, index=False)
-    writer.close()
 
 
 if __name__ == "__main__":
